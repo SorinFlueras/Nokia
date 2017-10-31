@@ -5,6 +5,13 @@
 #include "opencv2/highgui/highgui.hpp"
 //#include <opencv2\cv.h>
 #include "opencv2/opencv.hpp"
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h> 
 
 using namespace std;
 using namespace cv;
@@ -31,6 +38,50 @@ const std::string windowName2 = "Thresholded Image";
 const std::string windowName3 = "After Morphological Operations";
 const std::string trackbarWindowName = "Trackbars";
 
+
+void error(const char *msg)
+{
+    perror(msg);
+    exit(0);
+}
+
+void send_directions(char argv1[], char argv2[]){
+    int sockfd, portno, n;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+
+    char buffer[256];
+    /*if (argc < 3) {
+       fprintf(stderr,"usage %s hostname port\n", argv[0]);
+       exit(0);
+    }*/
+    portno = atoi(argv2);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) 
+        error("ERROR opening socket");
+    server = gethostbyname(argv1);
+    if (server == NULL) {
+        fprintf(stderr,"ERROR, no such host\n");
+        exit(0);
+    }
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, 
+         (char *)&serv_addr.sin_addr.s_addr,
+         server->h_length);
+    serv_addr.sin_port = htons(portno);
+    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
+        error("ERROR connecting");
+    printf("Please enter the message: ");
+    bzero(buffer,256);
+    fgets(buffer,255,stdin);
+    n = write(sockfd,buffer,strlen(buffer));
+    if (n < 0) 
+         error("ERROR writing to socket");
+    bzero(buffer,256);
+    close(sockfd);
+    
+}
 
 void on_mouse(int e, int x, int y, int d, void *ptr)
 {
@@ -175,9 +226,8 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 		else putText(cameraFeed, "TOO MUCH NOISE! ADJUST FILTER", Point(0, 50), 1, 2, Scalar(0, 0, 255), 2);
 	}
 }
-int main(int argc, char* argv[])
-{
-
+/*
+void detect_color(){
 	//some boolean variables for different functionality within this
 	//program
 	//bool trackObjects = true;
@@ -234,11 +284,7 @@ int main(int argc, char* argv[])
 		}
 		morphOps(threshold);
 		trackFilteredObject(x, y, threshold, cameraFeed);
-		/*if (useMorphOps)
-			morphOps(threshold);
-		if (trackObjects){
-			trackFilteredObject(x, y, threshold, cameraFeed);
-		}*/
+		
 		//show frames
 		imshow(windowName2, threshold);
 		imshow(windowName, cameraFeed);
@@ -248,7 +294,54 @@ int main(int argc, char* argv[])
 		//image will not appear without this waitKey() command
 		waitKey(30);
 	}
+}*/
 
+void send_string_of_directions(char directions[], char argv1[], char argv2[]){
+    int sockfd, portno, n;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+
+    char buffer[256];
+    /*if (argc < 3) {
+       fprintf(stderr,"usage %s hostname port\n", argv[0]);
+       exit(0);
+    }*/
+    portno = atoi(argv2);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) 
+        error("ERROR opening socket");
+    server = gethostbyname(argv1);
+    if (server == NULL) {
+        fprintf(stderr,"ERROR, no such host\n");
+        exit(0);
+    }
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, 
+         (char *)&serv_addr.sin_addr.s_addr,
+         server->h_length);
+    serv_addr.sin_port = htons(portno);
+    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
+        error("ERROR connecting");
+    bzero(buffer,256);
+    //fgets(buffer,255,stdin);
+    for(int i = 0; i < strlen(directions); i++){
+
+   	 sprintf(buffer, "%c", directions[i]);
+   	 n = write(sockfd,buffer,strlen(buffer));
+    	 if (n < 0) 
+        	 error("ERROR writing to socket");
+	 sleep(10);
+    	 bzero(buffer,256);
+    }
+    close(sockfd);
+}
+int main(int argc, char* argv[])
+{
+	// cmake .
+	// make
+	char directions[] = "sfslsrsbs";	
+	send_string_of_directions(directions,argv[1], argv[2]);
 	return 0;
 }
 
